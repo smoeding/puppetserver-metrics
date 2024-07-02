@@ -2,6 +2,9 @@
 
 This Python3 script uses the [Puppet Server V2 metrics API](https://www.puppet.com/docs/puppet/8/server/metrics-api/v2/metrics_api.html) to show some performance metrics of the Puppetserver. The curses library is used to present the metrics with simple terminal graphics.
 
+![Screenshot](Screenshot.png)
+
+This script might be useful for consultants visiting a Customer to investigate suspected performance problems with the Puppetserver. It only needs a default Python interpreter and provides graphical monitoring without any additional software installation.
 
 If the appearance of the output looks familiar to you, then you are probably old enough to have worked with the VAX/VMS respectively OpenVMS operating system: the layout and implementation of the metric panels has been inspired by the `MONITOR SYSTEM` command.
 
