@@ -14,6 +14,33 @@ The script requires a modern Python 3.x interpreter. All required modules are pa
 
 The Puppetserver API uses a client certificate for authentication. So the script will need access to a certificate issued by the Puppetserver to run. There are two ways this can be achieved.
 
+### Prepare the Puppetserver
+
+The API endpoint is normally disabled. Use the following steps to enable it.
+
+Locate the authentication configuration of your Puppetserver. For Linux this should be the file `/etc/puppetlabs/puppetserver/conf.d/auth.conf`. Make a backup copy of this file in case you need to revert to the old configuration.
+
+The file uses the HOCON format, which is a superset of [JSON](https://en.wikipedia.org/wiki/JSON). It contains an array of objects that describe the access rules for the server.
+
+The last rule should have the name `puppetlabs deny all` that blocks all requests not allowed by the preceding rules. Add the following block just before the last block:
+
+``` hocon
+{
+    match-request: {
+        path: "/metrics/v2"
+        type: path
+        method: [get, post]
+    }
+    allow: "*"
+    sort-order: 500
+    name: "puppet metrics information"
+},
+```
+
+Take care to keep the braces balanced. Also note the trailing comma after the closing brace since this object is part of the rule array and the final array element should be the deny rule.
+
+Save the file and restart the Puppetserver. Check for errors in the Puppetserver log file in case of startup failures.
+
 ### Running the script as ordinary user
 
 If you plan to use the script as ordinary user, then you will have to create a new client certificate and have it signed by the Puppetserver. You can create a personal certification request by running the following two command:
