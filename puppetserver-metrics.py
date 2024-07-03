@@ -26,6 +26,10 @@
 #
 #
 
+"""
+Puppetserver Metrics using terminal based graphics.
+"""
+
 import os
 import ssl
 import sys
@@ -41,7 +45,6 @@ import threading
 import configparser
 import urllib.request
 
-from re import compile
 from os import access, R_OK
 from os.path import isfile
 
@@ -57,16 +60,16 @@ class Widget:
 
     @staticmethod
     def unit(value, precision=0):
-        """Format a value for output"""
+        """Format a value for output."""
 
         if value > 2**30:
             return "{value:.{precision}f}G".format(value=value / 2**30, precision=precision)
-        elif value > 2**20:
+        if value > 2**20:
             return "{value:.{precision}f}M".format(value=value / 2**20, precision=precision)
-        elif value > 2**10:
+        if value > 2**10:
             return "{value:.{precision}f}K".format(value=value / 2**10, precision=precision)
-        else:
-            return "{value:.{precision}f}".format(value=value, precision=precision)
+
+        return "{value:.{precision}f}".format(value=value, precision=precision)
 
     @staticmethod
     def limitlabel(value):
@@ -93,7 +96,7 @@ class Widget:
 
         return limit, label
 
-    def __init__(self, screen, y, x, upper_title=None, lower_title=None):
+    def __init__(self, screen, y, x):
         self.uoffset = 5
         self.loffset = 5
 
@@ -123,17 +126,19 @@ class Widget:
         self.window.hline(4, 3, curses.ACS_HLINE, 26)
         self.window.addch(4, 29, curses.ACS_LRCORNER)
 
-        # Set upper title if defined
-        if upper_title:
-            self.window.addstr(0, 3, " {:<24}".format(upper_title))
-            self.uoffset += len(upper_title)
+    def upper_title(self, title):
+        """Set upper title."""
 
-        # Set lower title if defined
-        if lower_title:
-            self.window.addstr(4, 3, " {:<24}".format(lower_title))
-            self.loffset += len(lower_title)
+        self.window.addstr(0, 3, " {:<24}".format(title))
+        self.uoffset += len(title)
 
-    def upper_limit(self, value, unit=None):
+    def lower_title(self, title):
+        """Set lower title."""
+
+        self.window.addstr(4, 3, " {:<24}".format(title))
+        self.loffset += len(title)
+
+    def upper_limit(self, value):
         """Set and display limit for upper widget part."""
 
         if (self._upper_limit is None) or (value > self._upper_limit):
@@ -144,7 +149,7 @@ class Widget:
             self.window.addstr(1, 31, label)
             self.window.refresh()
 
-    def lower_limit(self, value, unit=None):
+    def lower_limit(self, value):
         """Set and display limit for lower widget part."""
 
         if (self._lower_limit is None) or (value > self._lower_limit):
@@ -158,7 +163,8 @@ class Widget:
     def limit(self, value):
         """Set and display limit for lower and upper widget part."""
 
-        if (self._upper_limit is None) or (value > self._upper_limit) or (self._lower_limit is None) or (value > self._lower_limit):
+        if ((self._upper_limit is None) or (value > self._upper_limit) or
+            (self._lower_limit is None) or (value > self._lower_limit)):
             limit, label = Widget.limitlabel(value)
 
             self._upper_limit = limit
@@ -173,8 +179,8 @@ class Widget:
         self.upper_limit(value)
 
         val = "({})".format(Widget.unit(value, precision))
-        str = val.ljust(28-self.uoffset)
-        self.window.addstr(0, self.uoffset, str)
+        out = val.ljust(28-self.uoffset)
+        self.window.addstr(0, self.uoffset, out)
 
         pct = (value / self._upper_limit) if (value > 0) else 0.0
 
@@ -189,8 +195,8 @@ class Widget:
         self.lower_limit(value)
 
         val = "({})".format(Widget.unit(value, precision))
-        str = val.ljust(28-self.loffset)
-        self.window.addstr(4, self.loffset, str)
+        out = val.ljust(28-self.loffset)
+        self.window.addstr(4, self.loffset, out)
 
         pct = (value / self._lower_limit) if (value > 0) else 0.0
 
@@ -217,21 +223,21 @@ class Metric:
 
         cls.context, cls.puppetserver, cls.port = context, puppetserver, port
 
-    def __init__(self, category, name=None, type=None):
+    def __init__(self, category, param_name=None, param_type=None):
         param = []
 
-        if type is not None:
-            param.append("type={}".format(type))
+        if param_type is not None:
+            param.append(f"type={param_type}")
 
-        if name is not None:
-            param.append("name={}".format(name))
+        if param_name is not None:
+            param.append(f"name={param_name}")
 
-        url = "https://{}:{}/metrics/v2/read/{}:{}".format(Metric.puppetserver,
-                                                           Metric.port,
-                                                           category,
-                                                           ",".join(param))
+        params = ",".join(param)
+
+        url = f"https://{Metric.puppetserver}:{Metric.port}/metrics/v2/read/{category}:{params}"
+
         self.request = urllib.request.Request(url=url)
-        self.request.add_header("User-Agent", "Puppetserver-Metrics/1.0")
+        self.request.add_header('User-Agent', 'Puppetserver-Metrics/1.0')
 
         self.last_timestamp = None
         self.curr_timestamp = None
@@ -261,14 +267,14 @@ class Metric:
 
         if self.last_timestamp is None or self.curr_timestamp is None:
             return None
-        else:
-            return self.curr_timestamp - self.last_timestamp
+
+        return self.curr_timestamp - self.last_timestamp
 
     def refresh(self):
         """Fetch updated metrics from the server."""
 
         with urllib.request.urlopen(self.request, context=Metric.context) as response:
-            if (response.status == 200):
+            if response.status == 200:
                 data = response.read()
 
                 # Parse JSON and store as object
@@ -281,12 +287,16 @@ class Metric:
 ##############################################################################
 #
 class OperatingSystemMetrics(Metric):
+    """Metrics for the operating system."""
+
     def __init__(self):
-        super().__init__('java.lang', type='OperatingSystem')
+        super().__init__('java.lang', param_type='OperatingSystem')
         self.prev_value = None
         self.refresh()
 
     def refresh(self):
+        """Refresh the metrics."""
+
         super().refresh()
 
         self.available_processors = self.value('AvailableProcessors')
@@ -295,12 +305,14 @@ class OperatingSystemMetrics(Metric):
 
     @property
     def process_cpu_time(self):
-        delta = None
+        """Getter method for the CPU time used by the Puppetserver."""
+
         value = self.value('ProcessCpuTime')
+        delta = None
 
         if value is not None:
             # convert to seconds
-            value = (value / 1000000000)
+            value /= 1000000000
 
             delta = 0 if (self.prev_value is None) else (value - self.prev_value) / self.timedelta()
             self.prev_value = value
@@ -310,11 +322,15 @@ class OperatingSystemMetrics(Metric):
 ##############################################################################
 #
 class MemoryMetrics(Metric):
+    """Metrics for the memory used in the Java VM."""
+
     def __init__(self):
-        super().__init__("puppetserver", name="puppetlabs.localhost.memory.*")
+        super().__init__('puppetserver', param_name='puppetlabs.localhost.memory.*')
         self.refresh()
 
     def refresh(self):
+        """Refresh the metrics."""
+
         super().refresh()
 
         self.heap_memory_max = self.value('puppetserver:name=puppetlabs.localhost.memory.heap.max', 'Value')
@@ -323,11 +339,15 @@ class MemoryMetrics(Metric):
 ##############################################################################
 #
 class ThreadingMetrics(Metric):
+    """Metrics for the threads used in the Java VM."""
+
     def __init__(self):
-        super().__init__('java.lang', type='Threading')
+        super().__init__('java.lang', param_type='Threading')
         self.refresh()
 
     def refresh(self):
+        """Refresh the metrics."""
+
         super().refresh()
 
         self.thread_count = self.value("ThreadCount")
@@ -337,11 +357,15 @@ class ThreadingMetrics(Metric):
 ##############################################################################
 #
 class JRubyMetrics(Metric):
+    """Metrics for the JRuby instances used in the Java VM."""
+
     def __init__(self):
-        super().__init__("puppetserver", name="puppetlabs.localhost.jruby.*")
+        super().__init__('puppetserver', param_name='puppetlabs.localhost.jruby.*')
         self.refresh()
 
     def refresh(self):
+        """Refresh the metrics."""
+
         super().refresh()
 
         self.num_rubies = self.value('puppetserver:name=puppetlabs.localhost.jruby.num-jrubies', 'Value')
@@ -351,8 +375,8 @@ class JRubyMetrics(Metric):
         self.request_rate_mean = self.value('puppetserver:name=puppetlabs.localhost.jruby.borrow-timer', 'MeanRate')
         self.request_rate_1min = self.value('puppetserver:name=puppetlabs.localhost.jruby.borrow-timer', 'OneMinuteRate')
 
-        self.queue_limit_mean_rate = self.value('puppetserver:name=puppetlabs.localhost.jruby.queue-limit-hit-meter', 'MeanRate')
-        self.queue_limit_1min_rate = self.value('puppetserver:name=puppetlabs.localhost.jruby.queue-limit-hit-meter', 'OneMinuteRate')
+        self.queue_limit_rate_mean = self.value('puppetserver:name=puppetlabs.localhost.jruby.queue-limit-hit-meter', 'MeanRate')
+        self.queue_limit_rate_mean = self.value('puppetserver:name=puppetlabs.localhost.jruby.queue-limit-hit-meter', 'OneMinuteRate')
 
         self.borrow_time_mean = self.value('puppetserver:name=puppetlabs.localhost.jruby.borrow-timer', 'Mean')
         self.wait_time_mean = self.value('puppetserver:name=puppetlabs.localhost.jruby.wait-timer', 'Mean')
@@ -362,12 +386,26 @@ class JRubyMetrics(Metric):
 class Application():
     """The metrics collector application."""
 
-    def __init__(self):
+    def __init__(self, puppetserver, port=8140, interval=3, verbose=False):
+        self.puppetserver = puppetserver
+        self.port = port
+        self.refresh_interval = interval
+        self.verbose = verbose
+        self.ctx = None
         self.done = threading.Event()
 
-    def setdone(self, signo, _frame):
-        """This method will be called if a signal is received. In this case we take
-        a note of the event. The main loop will terminate as a result.
+        # Catch the signals usually used to terminate the program. We do this
+        # to be able to clean up the screen by calling curses.endwin() in the
+        # finally block below.
+
+        signal.signal(signal.SIGHUP, self.setdone)
+        signal.signal(signal.SIGINT, self.setdone)
+        signal.signal(signal.SIGTERM, self.setdone)
+
+    def setdone(self, _signo, _frame):
+        """This method will be called if a signal is received. In this case
+        we take a note of the event. The main loop will terminate as
+        a result.
         """
         self.done.set()
 
@@ -376,41 +414,27 @@ class Application():
 
         if isfile(file):
             if self.verbose:
-                print("{} {} exists".format(description, file))
+                print(f"{description} {file} exists")
 
             if access(file, R_OK):
                 if self.verbose:
-                    print("{} {} is readable".format(description, file))
+                    print(f"{description} {file} is readable")
                 return True
 
         if self.verbose:
-            print("{} {} is not readable or does not exist".format(description, file))
+            print(f"{description} {file} is not readable or does not exist")
 
         return False
 
     def setup(self):
         """Setup the application."""
 
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-v", "--verbose", help="be more verbose", action="store_true")
-        parser.add_argument("--interval", help="the interval between updates in seconds", type=int, default=3)
-        parser.add_argument("--server", help="the Puppetserver to connect to; the default is 'puppet'")
-        parser.add_argument("--key", help="the SSL private key used for authentication")
-        parser.add_argument("--cert", help="the SSL client certificate")
-        parser.add_argument("--cacert", help="the SSL certificate file to verify the peer")
-        parser.add_argument("--no-proxy", help="ignore proxy environment variables", action="store_true")
-
-        args = parser.parse_args()
         fqdn = socket.getfqdn()
         user = getpass.getuser()
+        home = os.path.expanduser('~')
 
         if user is None:
             raise CustomException("Can't determine your username")
-
-        # Set refresh interval from command line option or use default
-        self.refresh_interval = args.interval
-
-        self.verbose = args.verbose
 
         #
         # Read settings from puppet.conf
@@ -418,7 +442,7 @@ class Application():
         config = configparser.ConfigParser(strict=True)
         config.read_dict({'agent': {'server': 'puppet'}})
 
-        puppetconf = os.path.join(os.path.expanduser('~'), '.puppetlabs/etc/puppet/puppet.conf')
+        puppetconf = os.path.join(home, '.puppetlabs/etc/puppet/puppet.conf')
 
         if self.tryfile(puppetconf, 'Puppet settings'):
             config.read(puppetconf)
@@ -428,15 +452,16 @@ class Application():
                 config.read(puppetconf)
 
         # Use name of Puppetserver from the config file or the script options
-        self.puppetserver = args.server if args.server else config['agent']['server']
+        if self.puppetserver is None:
+            self.puppetserver = config['agent']['server']
 
         if self.verbose:
-            print("Using puppetserver {}".format(self.puppetserver))
+            print(f"Using puppetserver {self.puppetserver}")
 
         #
         # Certificate files used by the standard Puppet installation
         #
-        cacert = os.path.join(os.path.expanduser('~'), '.puppetlabs/etc/puppet/ssl/certs/ca.pem')
+        cacert = os.path.join(home, '.puppetlabs/etc/puppet/ssl/certs/ca.pem')
 
         if not self.tryfile(cacert, 'CA certificate'):
             cacert = '/etc/puppetlabs/puppet/ssl/certs/ca.pem'
@@ -444,29 +469,23 @@ class Application():
             if not self.tryfile(cacert, 'CA certificate'):
                 raise CustomException('No usable CA certificate found')
 
-        cert = os.path.join(os.path.expanduser('~'), '.puppetlabs/etc/puppet/ssl/certs/{}.pem'.format(user))
+        # Certificate
+        cert = os.path.join(home, f".puppetlabs/etc/puppet/ssl/certs/{user}.pem")
 
         if not self.tryfile(cert, 'Client certificate'):
-            cert = '/etc/puppetlabs/puppet/ssl/certs/{}.pem'.format(fqdn)
+            cert = f"/etc/puppetlabs/puppet/ssl/certs/{fqdn}.pem"
 
             if not self.tryfile(cert, 'Client certificate'):
                 raise CustomException('No usable client certificate found')
 
-        key = os.path.join(os.path.expanduser('~'), '.puppetlabs/etc/puppet/ssl/private_keys/{}.pem'.format(user))
+        # Key
+        key = os.path.join(home, f".puppetlabs/etc/puppet/ssl/private_keys/{user}.pem")
 
         if not self.tryfile(key, 'Client key'):
-            key = '/etc/puppetlabs/puppet/ssl/private_keys/{}.pem'.format(fqdn)
+            key = f"/etc/puppetlabs/puppet/ssl/private_keys/{fqdn}.pem"
 
             if not self.tryfile(key, 'Client key'):
                 raise CustomException('No usable client key found')
-
-        # Disable proxy settings inherited from the shell environment
-        if args.no_proxy:
-            for var in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY']:
-                if (var in os.environ):
-                    del os.environ[var]
-                    if self.verbose:
-                        print("Removed environment variable {}".format(var))
 
         # Create SSL context for client authentication
         self.ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH, cafile=cacert)
@@ -476,7 +495,7 @@ class Application():
         #self.ctx.minimum_version = ssl.TLSVersion.TLSv1_3
 
         # All metrics are fetched from the same Puppetserver
-        Metric.initialize(self.ctx, self.puppetserver, 8140)
+        Metric.initialize(self.ctx, self.puppetserver, self.port)
 
     def run(self):
         """The main loop of the application code."""
@@ -486,21 +505,13 @@ class Application():
         metric3 = ThreadingMetrics()
         metric4 = JRubyMetrics()
 
-        # Catch the signals usually used to terminate the program. We do this
-        # to be able to clean up the screen by calling curses.endwin() in the
-        # finally block below.
-
-        signal.signal(signal.SIGHUP, self.setdone);
-        signal.signal(signal.SIGINT, self.setdone);
-        signal.signal(signal.SIGTERM, self.setdone);
-
         #
         # GUI
         #
         try:
             screen = curses.initscr()
-            screen.addstr(0, 0, 'Node: {}'.format(self.puppetserver))
-            screen.addstr(0, 30, "Puppetserver Metrics")
+            screen.addstr(0, 0, f'Node: {self.puppetserver}')
+            screen.addstr(0, 30, 'Puppetserver Metrics')
             screen.addstr(0, 50, time.asctime().rjust(30))
 
             # Threads panel
@@ -516,30 +527,40 @@ class Application():
             screen.addstr(6, 63, "{:<7}".format("Mem:"))
 
             # JVM panel
-            screen.addstr(5, 0, "JVM")
-            widget1 = Widget(screen, 3, 8, "CPU Time", "Heap")
+            screen.addstr(5, 0, 'JVM')
+            widget1 = Widget(screen, 3, 8)
+            widget1.upper_title('CPU Time')
+            widget1.lower_title('Heap')
             widget1.upper_limit(metric1.available_processors)
             widget1.lower_limit(metric2.heap_memory_max)
 
             # Request panel
-            screen.addstr(12, 0, "REQ")
-            widget2 = Widget(screen, 10, 8, 'Mean Rate', '1min Rate')
+            screen.addstr(12, 0, 'REQ')
+            widget2 = Widget(screen, 10, 8)
+            widget2.upper_title('Mean Rate')
+            widget2.lower_title('1min Rate')
 
             # Queue Limit panel
-            widget3 = Widget(screen, 10, 45, 'Mean Q-Lim Rate', '1min Q-Lim Rate')
+            widget3 = Widget(screen, 10, 45)
+            widget3.upper_title('Mean Q-Lim Rate')
+            widget3.lower_title('1min Q-Lim Rate')
 
             # JRUBY panels
-            screen.addstr(19, 0, "JRUBY")
-            widget4 = Widget(screen, 17, 8, "Mean In-Use", "Current In-Use")
+            screen.addstr(19, 0, 'JRUBY')
+            widget4 = Widget(screen, 17, 8)
+            widget4.upper_title('Mean In-Use')
+            widget4.lower_title('Current In-Use')
             widget4.limit(metric4.num_rubies)
 
-            widget5 = Widget(screen, 17, 45, "Service Time", "Wait Time")
+            widget5 = Widget(screen, 17, 45)
+            widget5.upper_title('Service Time')
+            widget5.lower_title('Wait Time')
 
             # Display initial screen
             screen.refresh()
 
             while not self.done.is_set():
-                start_loop_time = time.time()
+                next_loop_time = time.time() + self.refresh_interval
 
                 # Refresh all metrics
                 metric1.refresh()
@@ -554,10 +575,12 @@ class Application():
 
                 # Node
                 system_load_average = metric1.system_load_average
+                available_processors = metric1.available_processors
+                physical_memory_size = Widget.unit(metric1.physical_memory_size)
 
                 screen.addstr(4, 69, "{:5.2f}".format(system_load_average))
-                screen.addstr(5, 69, "{:5d}".format(metric1.available_processors))
-                screen.addstr(6, 69, "{:>5}".format(Widget.unit(metric1.physical_memory_size)))
+                screen.addstr(5, 69, "{:5d}".format(available_processors))
+                screen.addstr(6, 69, "{:>5}".format(physical_memory_size))
 
                 # JVM
                 process_cpu_time = metric1.process_cpu_time
@@ -577,14 +600,14 @@ class Application():
                 widget2.lvalue(request_rate_1min, 1)
 
                 # Queue Limit Hit Rate
-                queue_limit_mean_rate = metric4.queue_limit_mean_rate
-                queue_limit_1min_rate = metric4.queue_limit_1min_rate
+                queue_limit_rate_mean = metric4.queue_limit_rate_mean
+                queue_limit_rate_mean = metric4.queue_limit_rate_mean
 
-                widget3.limit(queue_limit_mean_rate)
-                widget3.limit(queue_limit_1min_rate)
+                widget3.limit(queue_limit_rate_mean)
+                widget3.limit(queue_limit_rate_mean)
 
-                widget3.uvalue(queue_limit_mean_rate, 2)
-                widget3.lvalue(queue_limit_1min_rate, 2)
+                widget3.uvalue(queue_limit_rate_mean, 2)
+                widget3.lvalue(queue_limit_rate_mean, 2)
 
                 # JRubies in-use
                 mean_used_rubies = metric4.mean_used_rubies
@@ -611,7 +634,7 @@ class Application():
                 # TODO: save metrics to file here
 
                 # Calculate delay based on the start time of the loop
-                self.done.wait(start_loop_time + self.refresh_interval - time.time())
+                self.done.wait(next_loop_time - time.time())
 
         finally:
             curses.endwin()
@@ -620,10 +643,39 @@ class Application():
 # Let's roll
 #
 if __name__ == '__main__':
-    app = Application()
-
     try:
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-v", "--verbose",
+                            help="be more verbose",
+                            action="store_true")
+        parser.add_argument("--interval",
+                            help="the interval between updates in seconds",
+                            type=int,
+                            default=3)
+        parser.add_argument("--server",
+                            help="the Puppetserver to use (default 'puppet')")
+        parser.add_argument("--key",
+                            help="the SSL private key used for authentication")
+        parser.add_argument("--cert",
+                            help="the SSL client certificate")
+        parser.add_argument("--cacert",
+                            help="the SSL certificate file to verify the peer")
+        parser.add_argument("--no-proxy",
+                            help="ignore proxy environment variables",
+                            action="store_true")
+
+        args = parser.parse_args()
+
+        # Disable proxy settings inherited from the shell environment
+        if args.no_proxy:
+            for var in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY']:
+                if var in os.environ:
+                    del os.environ[var]
+                    if args.verbose:
+                        print(f"Removed environment variable {var}")
+
+        app = Application(args.server, 8140, args.interval, args.verbose)
         app.setup()
         app.run()
     except Exception as excp:
-        quit("{}: {}".format(sys.argv[0], excp))
+        sys.exit(f"{sys.argv[0]}: {excp}")
