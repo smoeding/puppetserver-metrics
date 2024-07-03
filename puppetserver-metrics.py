@@ -376,7 +376,7 @@ class JRubyMetrics(Metric):
         self.request_rate_1min = self.value('puppetserver:name=puppetlabs.localhost.jruby.borrow-timer', 'OneMinuteRate')
 
         self.queue_limit_rate_mean = self.value('puppetserver:name=puppetlabs.localhost.jruby.queue-limit-hit-meter', 'MeanRate')
-        self.queue_limit_rate_mean = self.value('puppetserver:name=puppetlabs.localhost.jruby.queue-limit-hit-meter', 'OneMinuteRate')
+        self.queue_limit_rate_1min = self.value('puppetserver:name=puppetlabs.localhost.jruby.queue-limit-hit-meter', 'OneMinuteRate')
 
         self.borrow_time_mean = self.value('puppetserver:name=puppetlabs.localhost.jruby.borrow-timer', 'Mean')
         self.wait_time_mean = self.value('puppetserver:name=puppetlabs.localhost.jruby.wait-timer', 'Mean')
@@ -601,13 +601,13 @@ class Application():
 
                 # Queue Limit Hit Rate
                 queue_limit_rate_mean = metric4.queue_limit_rate_mean
-                queue_limit_rate_mean = metric4.queue_limit_rate_mean
+                queue_limit_rate_1min = metric4.queue_limit_rate_1min
 
                 widget3.limit(queue_limit_rate_mean)
-                widget3.limit(queue_limit_rate_mean)
+                widget3.limit(queue_limit_rate_1min)
 
                 widget3.uvalue(queue_limit_rate_mean, 2)
-                widget3.lvalue(queue_limit_rate_mean, 2)
+                widget3.lvalue(queue_limit_rate_1min, 2)
 
                 # JRubies in-use
                 mean_used_rubies = metric4.mean_used_rubies
