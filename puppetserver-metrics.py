@@ -391,7 +391,6 @@ class Application():
         self.port = port
         self.refresh_interval = interval
         self.verbose = verbose
-        self.ctx = None
         self.done = threading.Event()
 
         # Catch the signals usually used to terminate the program. We do this
@@ -488,14 +487,14 @@ class Application():
                 raise CustomException('No usable client key found')
 
         # Create SSL context for client authentication
-        self.ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH, cafile=cacert)
-        self.ctx.load_cert_chain(cert, key)
+        ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH, cafile=cacert)
+        ctx.load_cert_chain(cert, key)
 
         # TLSv1.3 would be nice but might not (yet) be available everywhere
-        #self.ctx.minimum_version = ssl.TLSVersion.TLSv1_3
+        #ctx.minimum_version = ssl.TLSVersion.TLSv1_3
 
         # All metrics are fetched from the same Puppetserver
-        Metric.initialize(self.ctx, self.puppetserver, self.port)
+        Metric.initialize(ctx, self.puppetserver, self.port)
 
     def run(self):
         """The main loop of the application code."""
