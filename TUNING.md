@@ -2,10 +2,11 @@
 
 The description of the script output and tuning hints will be described using the following screenshot. It shows a snapshot of the metrics on a Puppetserver supporting more than 1000 nodes. The system has 6 CPU cores and 20GB of RAM.
 
-The Puppetserver has been configured with a JVM heap size of 8GB. Specifically the following Java arguments are used:
+The Puppetserver has been configured with a JVM heap size of 8GB. Specifically the following Java arguments are used for this Puppetserver:
 
 ```
-JAVA_ARGS="-Xmx8g -Xms8g -XX:ReservedCodeCacheSize=768m -XX:ParallelGCThreads=4 -Djruby.logger.class=com.puppetlabs.jruby_utils.jruby.Slf4jLogger"
+JAVA_ARGS="-Xmx8g -Xms8g -XX:ReservedCodeCacheSize=768m -XX:ParallelGCThreads=4 \
+		   -Djruby.logger.class=com.puppetlabs.jruby_utils.jruby.Slf4jLogger"
 ```
 
 ![Screenshot](Screenshot.png)
@@ -56,7 +57,7 @@ This difference tells us about the heterogeneity of arrivals for this system. If
 
 ### Queue Limit Hit Rate
 
-The panel on the middle right gives the rate at which the queue limit is hit. In this case the request is rejected (a 503 "Service Unavailable" response is returned) and the agent might try again later. I believe this metric only has useful values if you have set the `max-queued-requests` configuration parameter for the Puppetserver.
+The panel on the middle right gives the rate at which the queue limit is hit. In this case the request is rejected (a HTTP/503 *Service Unavailable* response is returned) and the agent might try again later. I believe this metric only has useful values if you have set the `max-queued-requests` configuration parameter for the Puppetserver.
 
 Obviously the system performance could be better if this metric shows non-zero values. Again the upper bar shows the mean rate while the lower bar has the mean rate over the last minute.
 
@@ -66,7 +67,7 @@ A JRuby is an interpreter instance to execute Ruby code inside the Java virtual 
 
 The top graph of the left panel shows the mean number of JRubies that are in-use. The lower graph indicates the number of JRubies that are currently in-use. If the Puppetserver has no free JRubies, it will have to queue the request until a JRuby is returned the pool. So you might want to increase the number of JRuby instances if these metrics indicate, that all JRubies are in use most of the time.
 
-In the example the mean number of allocated JRubies is 4.67 while at the specific point in time all six JRubies were unavailable to handle the next request.
+In the example the mean number of allocated JRubies is 4.67 while at the specific point in time all six JRubies were in-use and therefore unavailable to handle the next request.
 
 ### JRuby Service and Wait Time
 
