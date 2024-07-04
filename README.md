@@ -24,7 +24,7 @@ optional arguments:
   --no-proxy           ignore proxy environment variables
 ```
 
-Details about the output and some tuning hints are given in the additional [TUNING](TUNUNG.md) reference.
+Details about the output and some tuning hints are given in the additional [TUNING](TUNING.md) reference.
 
 *Fun Fact*: If the appearance of the graphics looks familiar to you, then you are probably old enough to have worked with the VAX/VMS respectively OpenVMS operating system: the layout of the metric panels has been inspired by the VMS `MONITOR SYSTEM` utility.
 
