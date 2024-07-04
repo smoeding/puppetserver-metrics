@@ -6,8 +6,6 @@ This script might be useful for consultants visiting a Customer to investigate s
 
 ![Screenshot](Screenshot.png)
 
-*Fun Fact*: If the appearance of the output looks familiar to you, then you are probably old enough to have worked with the VAX/VMS respectively OpenVMS operating system: the layout of the metric panels has been inspired by the VMS `MONITOR SYSTEM` utility.
-
 You can use the `--help` argument to display the usage message:
 
 ```
@@ -27,6 +25,8 @@ optional arguments:
 ```
 
 Details about the output and some tuning hints are given in the additional [TUNING](TUNUNG.md) reference.
+
+*Fun Fact*: If the appearance of the graphics looks familiar to you, then you are probably old enough to have worked with the VAX/VMS respectively OpenVMS operating system: the layout of the metric panels has been inspired by the VMS `MONITOR SYSTEM` utility.
 
 ## Installation and configuration
 
