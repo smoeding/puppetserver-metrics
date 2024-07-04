@@ -10,8 +10,8 @@ You can use the `--help` argument to display the usage message:
 
 ```
 usage: puppetserver-metrics.py [-h] [-v] [--interval INTERVAL]
-							   [--server SERVER] [--key KEY] [--cert CERT]
-							   [--cacert CACERT] [--no-proxy]
+                               [--server SERVER] [--key KEY] [--cert CERT]
+                               [--cacert CACERT] [--no-proxy]
 
 optional arguments:
   -h, --help           show this help message and exit
@@ -82,14 +82,14 @@ The last rule should have the name `puppetlabs deny all` that blocks all request
 
 ``` hocon
 {
-	match-request: {
-		path: "/metrics/v2"
-		type: path
-		method: [get, post]
-	}
-	allow: "*"
-	sort-order: 500
-	name: "puppet metrics information"
+    match-request: {
+        path: "/metrics/v2"
+        type: path
+        method: [get, post]
+    }
+    allow: "*"
+    sort-order: 500
+    name: "puppet metrics information"
 },
 ```
 
