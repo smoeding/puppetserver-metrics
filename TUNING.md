@@ -4,26 +4,24 @@ The description of the script output and tuning hints will be described using th
 
 The Puppetserver has been configured with a JVM heap size of 8GB. Specifically the following Java arguments are used for this Puppetserver:
 
-```
+```shell
 JAVA_ARGS="-Xmx8g -Xms8g -XX:ReservedCodeCacheSize=768m -XX:ParallelGCThreads=4 \
-		   -Djruby.logger.class=com.puppetlabs.jruby_utils.jruby.Slf4jLogger"
+           -Djruby.logger.class=com.puppetlabs.jruby_utils.jruby.Slf4jLogger"
 ```
 
 ![Screenshot](Screenshot.png)
 
 ## Layout
 
-The first line of the screen shows the name of the Puppetserver on the left side and the time when the metrics were taken on the right side.
+The first line of the screen shows the name of the Puppetserver on the left side and the time when the metrics were taken on the right side. The remaining screen contains six areas in a three rows and two columns format. These areas are filled with five graphical panels and a text panel on the top right position.
 
-The remaining screen contains six areas in a three rows and two columns format. These areas are filled with five graphical panels and a text panel on the top right position.
+The top row panels (`JVM`) present metrics about the Java Virtual Machine running the code of the Puppetserver. The graphical panel on the left side shows the current CPU time usage and heap size of the JVM. The text panel on the right displays the number of JVM threads and some system statistics like load average, number of CPU cores and size of system memory.
 
-The top row panels (JVM) present metrics about the Java Virtual Machine running the code of the Puppetserver. The graphical panel on the left side shows the current CPU time usage and heap size of the JVM. The text panel on the right displays the number of JVM threads and some system statistics like load average, number of CPU cores and size of system memory.
+The middle row panels (`REQ`) has metrics about the requests arriving at the system. The left panel contains metrics about the request rate and the right panel shows the rate at which the queue limit is hit.
 
-The middle row panels (REQ) has metrics about the requests arriving at the system. The left panel contains metrics about the request rate and the right panel shows the rate at which the queue limit is hit.
+The bottom row panels (`JRUBY`) contains metrics about the JRuby utilization. On the left side the number of JRubies in use is displayed while the right hand side has the service and wait times.
 
-The bottom row panels (JRUBY) contains metrics about the JRuby utilization. On the left side the number of JRubies in-use is displayed while the right hand side has the service and wait times.
-
-All panels contain on the right hand side a number that indicates the scale of the presented values. The JVM panel on the top left has two scale values since CPU time and memory size are shown. The other panels use a common scale for the displayed values which makes it easier to compare the two values. The displayed range of the panels automatically adjusts to the largest measured value.
+All panels contain on the right hand side a number that indicates the dynamic range of the presented values. The JVM panel on the top left has two scale values since CPU time and memory size are shown. The other panels use a common scale for the displayed values which makes it easier to compare the two values. The range of the panels automatically adjusts to the largest measured value.
 
 ## Metrics in detail
 
@@ -51,7 +49,7 @@ Java garbage collection is a well researched and documented area. Use your favor
 
 ### Request Rate
 
-The panel on the middle left shows the rate of requests arriving at the Puppetserver. The top graph depicts the mean arrival rate (&lambda; in queueing theory designation). The lower graph also shows the mean arrival rate but this time it is only calculated for the last minute. In the example we see a mean arrival rate of 11.8 requests per second while the arrival rate for the last minute is given as 26.9 requests per second.
+The panel on the middle left shows the rate of requests arriving at the Puppetserver. The top graph depicts the mean arrival rate ($\lambda$ in queueing theory designation). The lower graph also shows the mean arrival rate but this time it is only calculated for the last minute. In the example we see a mean arrival rate of 11.8 requests per second while the arrival rate for the last minute is given as 26.9 requests per second.
 
 This difference tells us about the heterogeneity of arrivals for this system. If the rate of the last minute differs significantly from the mean, then there are to be times of high load and other times of low load. This indicates that a certain number of agents seem to connect at the same time. System utilization might be better if the demand could be distributed better over time. Maybe the `splay` parameter in the Puppet configuration could help.
 
@@ -63,16 +61,16 @@ Obviously the system performance could be better if this metric shows non-zero v
 
 ### JRuby Usage
 
-A JRuby is an interpreter instance to execute Ruby code inside the Java virtual machine. The number of JRubies is usually configured automatically depending on the number of CPU cores of the Puppetserver. But they can also be defined with the Puppetserver setting `max-active-instances`. Each request to the Puppetserver (upload facts, compile catalog, send file, ...) will need a JRuby instance to execute the relevant Ruby code to fulfill the request. The JRubies are managed as a resource pool so that a JRuby instance is borrowed from the pool to handle a request and then returned to the pool to be available for the next request.
+A JRuby is an interpreter instance to execute Ruby code inside the Java virtual machine. The number of JRubies is usually configured automatically depending on the number of CPU cores of the Puppetserver. But they can also be defined with the [Puppetserver setting](https://www.puppet.com/docs/puppet/latest/server/config_file_puppetserver) `max-active-instances`. Each request to the Puppetserver (upload facts, compile catalog, send file, ...) will need a JRuby instance to execute the relevant Ruby code to fulfill the request. The JRubies are managed as a resource pool so that a JRuby instance is borrowed from the pool to handle a request and then returned to the pool to be available for the next request. Since the pool has a fixed size the number of instances dictates the total concurrency that can be handled by the server.
 
-The top graph of the left panel shows the mean number of JRubies that are in-use. The lower graph indicates the number of JRubies that are currently in-use. If the Puppetserver has no free JRubies, it will have to queue the request until a JRuby is returned the pool. So you might want to increase the number of JRuby instances if these metrics indicate, that all JRubies are in use most of the time.
+The top graph of the left panel shows the mean number of JRubies that are in use. The lower graph indicates the number of JRubies that are currently in use. If the Puppetserver has no free JRubies, it will have to queue the request until a JRuby is returned the pool. So you might want to increase the number of JRuby instances if these metrics indicate, that most or all JRubies are in use most of the time.
 
-In the example the mean number of allocated JRubies is 4.67 while at the specific point in time all six JRubies were in-use and therefore unavailable to handle the next request.
+In the example the mean number of allocated JRubies is 4.67 while at the specific point in time all six JRubies were in use and therefore unavailable to handle the next request.
 
 ### JRuby Service and Wait Time
 
-The bottom right panel shows the mean service time for a JRuby in the upper graph. This is the mean time that the JRuby is allocated from the pool and is used to fulfil a request. The lower graph in the panel contains the mean wait time that a request will have before a JRuby is available to handle the request.
+The bottom right panel shows the mean service time (in queueing theory traditionally written as $1/\mu$) for a JRuby in the upper graph. This is the mean time that the JRuby is allocated from the pool and is running the Ruby code to fulfil a request. The lower graph in the panel contains the mean wait time ($W_q$) that new requests will have to wait before a JRuby is available to start processing the request.
 
-Both times are presented in milliseconds. So for the given example we have a mean service time of 145.1ms and a mean wait time of 117.8ms. Waiting time is always a bad sign so in this case performance will suffer significantly.
+Both times are presented in milliseconds. So for the given example we have a mean service time of 145.1ms and a mean wait time of 117.8ms. Waiting time is always a bad sign but in this case the wait time has the same magnitude as the service time so performance will suffer significantly.
 
 These measurements match the data from the usage graph as most of the time there doesn't seem to be a free JRuby in the pool to handle a new request when it arrives.
