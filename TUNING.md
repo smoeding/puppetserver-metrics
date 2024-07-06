@@ -71,6 +71,6 @@ In the example the mean number of allocated JRubies is 4.67 while at the specifi
 
 The bottom right panel shows the mean service time (in queueing theory traditionally written as $1/\mu$) for a JRuby in the upper graph. This is the mean time that the JRuby is allocated from the pool and is running the Ruby code to fulfil a request. The lower graph in the panel contains the mean wait time ($W_q$) that new requests will have to wait before a JRuby is available to start processing the request.
 
-Both times are presented in milliseconds. So for the given example we have a mean service time of 145.1ms and a mean wait time of 117.8ms. Waiting time is always a bad sign but in this case the wait time has the same magnitude as the service time so performance will suffer significantly.
+Both times are presented in milliseconds. So for the given example we have a mean service time of 145.1ms and a mean wait time of 117.8ms. Waiting time is always a bad sign but in this case the wait time has the same magnitude as the service time so here performance will suffer significantly.
 
 These measurements match the data from the usage graph as most of the time there doesn't seem to be a free JRuby in the pool to handle a new request when it arrives.
