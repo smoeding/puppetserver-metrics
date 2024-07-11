@@ -9,6 +9,8 @@ JAVA_ARGS="-Xmx8g -Xms8g -XX:ReservedCodeCacheSize=768m -XX:ParallelGCThreads=4 
            -Djruby.logger.class=com.puppetlabs.jruby_utils.jruby.Slf4jLogger"
 ```
 
+*Note*: there is also a [tuning guide](https://www.puppet.com/docs/puppet/latest/server/tuning_guide) published on Puppet.com
+
 ![Screenshot](Screenshot.png)
 
 ## Layout
@@ -61,7 +63,11 @@ Obviously the system performance could be better if this metric shows non-zero v
 
 ### JRuby Usage
 
-A JRuby is an interpreter instance to execute Ruby code inside the Java virtual machine. The number of JRubies is usually configured automatically depending on the number of CPU cores of the Puppetserver. But they can also be defined with the [Puppetserver setting](https://www.puppet.com/docs/puppet/latest/server/config_file_puppetserver) `max-active-instances`. Each request to the Puppetserver (upload facts, compile catalog, send file, ...) will need a JRuby instance to execute the relevant Ruby code to fulfill the request. The JRubies are managed as a resource pool so that a JRuby instance is borrowed from the pool to handle a request and then returned to the pool to be available for the next request. Since the pool has a fixed size the number of instances dictates the total concurrency that can be handled by the server.
+A JRuby is an interpreter instance to execute Ruby code inside the Java virtual machine. The number of JRubies is usually configured automatically depending on the number of CPU cores of the Puppetserver. But they can also be defined with the [Puppetserver setting](https://www.puppet.com/docs/puppet/latest/server/config_file_puppetserver) `max-active-instances`.
+
+Most requests to the Puppetserver (upload facts, compile catalog, send file, ...) will need a JRuby instance to execute the relevant Ruby code to fulfill the request. Only the Puppetserver certificate authority, which manages the clients certificates, doesn't seem to need a JRuby.
+
+The JRubies are managed as a resource pool so that a JRuby instance is borrowed from the pool to handle a request and then returned to the pool to be available for the next request. Since the pool has a fixed size the number of instances dictates the total concurrency that can be handled by the server.
 
 The top graph of the left panel shows the mean number of JRubies that are in use. The lower graph indicates the number of JRubies that are currently in use. If the Puppetserver has no free JRubies, it will have to queue the request until a JRuby is returned the pool. So you might want to increase the number of JRuby instances if these metrics indicate, that most or all JRubies are in use most of the time.
 
