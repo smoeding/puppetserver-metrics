@@ -634,8 +634,6 @@ class Application():
 
                 self.screen.refresh()
 
-                # TODO: save metrics to file
-
                 # Calculate delay based on the start time of the loop
                 self.done.wait(next_loop_time - time.time())
 
