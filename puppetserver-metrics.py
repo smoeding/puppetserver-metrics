@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2023, 2024, Stefan Möding
+# Copyright (c) 2023, 2024, 2025, Stefan Möding
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -487,7 +487,7 @@ class Application():
                 raise CustomException('No usable client key found')
 
         # Create SSL context for client authentication
-        ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH, cafile=cacert)
+        ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=cacert)
         ctx.load_cert_chain(cert, key)
 
         # TLSv1.3 would be nice but might not (yet) be available everywhere
