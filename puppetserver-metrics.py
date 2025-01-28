@@ -392,7 +392,6 @@ class Application():
 
     # pylint: disable=too-many-instance-attributes, line-too-long
 
-    screen = None
     widget1 = None
     widget2 = None
     widget3 = None
@@ -513,53 +512,52 @@ class Application():
         # All metrics are fetched from the same Puppetserver
         Metric.initialize(ctx, self.puppetserver, self.port)
 
-    def initscreen(self):
-        """Initialize the screen and generate the GUI."""
+    def initpanels(self, screen):
+        """Initialize the screen panels and generate the GUI."""
 
-        self.screen = curses.initscr()
-        self.screen.addstr(0, 0, f'Node: {self.puppetserver}')
-        self.screen.addstr(0, 30, 'Puppetserver Metrics')
-        self.screen.addstr(0, 50, time.asctime().rjust(30))
+        screen.addstr(0, 0, f'Node: {self.puppetserver}')
+        screen.addstr(0, 30, 'Puppetserver Metrics')
+        screen.addstr(0, 50, time.asctime().rjust(30))
 
         # Threads panel
-        self.screen.addstr(3, 48, "{:^13}".format("JVM Threads"))
-        self.screen.addstr(4, 48, "{:<8}".format("Current:"))
-        self.screen.addstr(5, 48, "{:<8}".format("Daemon:"))
-        self.screen.addstr(6, 48, "{:<8}".format("Peak:"))
+        screen.addstr(3, 48, "{:^13}".format("JVM Threads"))
+        screen.addstr(4, 48, "{:<8}".format("Current:"))
+        screen.addstr(5, 48, "{:<8}".format("Daemon:"))
+        screen.addstr(6, 48, "{:<8}".format("Peak:"))
 
         # System panel
-        self.screen.addstr(3, 63, "{:^10}".format("System"))
-        self.screen.addstr(4, 63, "{:<7}".format("Load:"))
-        self.screen.addstr(5, 63, "{:<7}".format("CPUs:"))
-        self.screen.addstr(6, 63, "{:<7}".format("Mem:"))
+        screen.addstr(3, 63, "{:^10}".format("System"))
+        screen.addstr(4, 63, "{:<7}".format("Load:"))
+        screen.addstr(5, 63, "{:<7}".format("CPUs:"))
+        screen.addstr(6, 63, "{:<7}".format("Mem:"))
 
         # JVM panel
-        self.screen.addstr(5, 0, 'JVM')
-        self.widget1 = Widget(self.screen, 3, 8)
+        screen.addstr(5, 0, 'JVM')
+        self.widget1 = Widget(screen, 3, 8)
         self.widget1.upper_title('CPU Time')
         self.widget1.lower_title('Heap')
         self.widget1.upper_limit(self.metric1.available_processors)
         self.widget1.lower_limit(self.metric2.heap_memory_max)
 
         # Request panel
-        self.screen.addstr(12, 0, 'REQ')
-        self.widget2 = Widget(self.screen, 10, 8)
+        screen.addstr(12, 0, 'REQ')
+        self.widget2 = Widget(screen, 10, 8)
         self.widget2.upper_title('Mean Rate')
         self.widget2.lower_title('1min Rate')
 
         # Queue Limit panel
-        self.widget3 = Widget(self.screen, 10, 45)
+        self.widget3 = Widget(screen, 10, 45)
         self.widget3.upper_title('Mean Q-Lim Rate')
         self.widget3.lower_title('1min Q-Lim Rate')
 
         # JRUBY panels
-        self.screen.addstr(19, 0, 'JRUBY')
-        self.widget4 = Widget(self.screen, 17, 8)
+        screen.addstr(19, 0, 'JRUBY')
+        self.widget4 = Widget(screen, 17, 8)
         self.widget4.upper_title('Mean In-Use')
         self.widget4.lower_title('Current In-Use')
         self.widget4.limit(self.metric4.num_rubies)
 
-        self.widget5 = Widget(self.screen, 17, 45)
+        self.widget5 = Widget(screen, 17, 45)
         self.widget5.upper_title('Service Time')
         self.widget5.lower_title('Wait Time')
 
@@ -575,10 +573,11 @@ class Application():
         # GUI
         #
         try:
-            self.initscreen()
+            screen = curses.initscr()
+            self.initpanels(screen)
 
             # Display initial screen
-            self.screen.refresh()
+            screen.refresh()
 
             while not self.done.is_set():
                 loop_time = time.time()
@@ -591,14 +590,14 @@ class Application():
                 self.metric4.refresh()
 
                 # JVM Threads
-                self.screen.addstr(4, 56, "{:5d}".format(self.metric3.thread_count))
-                self.screen.addstr(5, 56, "{:5d}".format(self.metric3.daemon_thread_count))
-                self.screen.addstr(6, 56, "{:5d}".format(self.metric3.peak_thread_count))
+                screen.addstr(4, 56, "{:5d}".format(self.metric3.thread_count))
+                screen.addstr(5, 56, "{:5d}".format(self.metric3.daemon_thread_count))
+                screen.addstr(6, 56, "{:5d}".format(self.metric3.peak_thread_count))
 
                 # Node
-                self.screen.addstr(4, 69, "{:5.2f}".format(self.metric1.system_load_average))
-                self.screen.addstr(5, 69, "{:5d}".format(self.metric1.available_processors))
-                self.screen.addstr(6, 69, "{:>5}".format(Widget.unit(self.metric1.physical_memory_size)))
+                screen.addstr(4, 69, "{:5.2f}".format(self.metric1.system_load_average))
+                screen.addstr(5, 69, "{:5d}".format(self.metric1.available_processors))
+                screen.addstr(6, 69, "{:>5}".format(Widget.unit(self.metric1.physical_memory_size)))
 
                 # JVM
                 self.widget1.uvalue(self.metric1.process_cpu_time, 2)
@@ -630,9 +629,9 @@ class Application():
                 self.widget5.lvalue(self.metric4.wait_time_mean, 1)
 
                 # Print current timestamp
-                self.screen.addstr(0, 50, time.asctime(time.localtime(loop_time)).rjust(30))
+                screen.addstr(0, 50, time.asctime(time.localtime(loop_time)).rjust(30))
 
-                self.screen.refresh()
+                screen.refresh()
 
                 # Calculate delay based on the start time of the loop
                 self.done.wait(next_loop_time - time.time())
