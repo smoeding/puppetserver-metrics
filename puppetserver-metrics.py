@@ -324,6 +324,8 @@ class OperatingSystemMetrics(Metric):
 class MemoryMetrics(Metric):
     """Metrics for the memory used in the Java VM."""
 
+    # pylint: disable=line-too-long
+
     def __init__(self):
         super().__init__('puppetserver', param_name='puppetlabs.localhost.memory.*')
         self.refresh()
@@ -359,6 +361,8 @@ class ThreadingMetrics(Metric):
 class JRubyMetrics(Metric):
     """Metrics for the JRuby instances used in the Java VM."""
 
+    # pylint: disable=too-many-instance-attributes, line-too-long
+
     def __init__(self):
         super().__init__('puppetserver', param_name='puppetlabs.localhost.jruby.*')
         self.refresh()
@@ -385,6 +389,19 @@ class JRubyMetrics(Metric):
 #
 class Application():
     """The metrics collector application."""
+
+    # pylint: disable=too-many-instance-attributes, line-too-long
+
+    screen = None
+    widget1 = None
+    widget2 = None
+    widget3 = None
+    widget4 = None
+    widget5 = None
+    metric1 = None
+    metric2 = None
+    metric3 = None
+    metric4 = None
 
     def __init__(self, puppetserver, port=8140, interval=3, verbose=False):
         self.puppetserver = puppetserver
@@ -496,141 +513,128 @@ class Application():
         # All metrics are fetched from the same Puppetserver
         Metric.initialize(ctx, self.puppetserver, self.port)
 
+    def initscreen(self):
+        """Initialize the screen and generate the GUI."""
+
+        self.screen = curses.initscr()
+        self.screen.addstr(0, 0, f'Node: {self.puppetserver}')
+        self.screen.addstr(0, 30, 'Puppetserver Metrics')
+        self.screen.addstr(0, 50, time.asctime().rjust(30))
+
+        # Threads panel
+        self.screen.addstr(3, 48, "{:^13}".format("JVM Threads"))
+        self.screen.addstr(4, 48, "{:<8}".format("Current:"))
+        self.screen.addstr(5, 48, "{:<8}".format("Daemon:"))
+        self.screen.addstr(6, 48, "{:<8}".format("Peak:"))
+
+        # System panel
+        self.screen.addstr(3, 63, "{:^10}".format("System"))
+        self.screen.addstr(4, 63, "{:<7}".format("Load:"))
+        self.screen.addstr(5, 63, "{:<7}".format("CPUs:"))
+        self.screen.addstr(6, 63, "{:<7}".format("Mem:"))
+
+        # JVM panel
+        self.screen.addstr(5, 0, 'JVM')
+        self.widget1 = Widget(self.screen, 3, 8)
+        self.widget1.upper_title('CPU Time')
+        self.widget1.lower_title('Heap')
+        self.widget1.upper_limit(self.metric1.available_processors)
+        self.widget1.lower_limit(self.metric2.heap_memory_max)
+
+        # Request panel
+        self.screen.addstr(12, 0, 'REQ')
+        self.widget2 = Widget(self.screen, 10, 8)
+        self.widget2.upper_title('Mean Rate')
+        self.widget2.lower_title('1min Rate')
+
+        # Queue Limit panel
+        self.widget3 = Widget(self.screen, 10, 45)
+        self.widget3.upper_title('Mean Q-Lim Rate')
+        self.widget3.lower_title('1min Q-Lim Rate')
+
+        # JRUBY panels
+        self.screen.addstr(19, 0, 'JRUBY')
+        self.widget4 = Widget(self.screen, 17, 8)
+        self.widget4.upper_title('Mean In-Use')
+        self.widget4.lower_title('Current In-Use')
+        self.widget4.limit(self.metric4.num_rubies)
+
+        self.widget5 = Widget(self.screen, 17, 45)
+        self.widget5.upper_title('Service Time')
+        self.widget5.lower_title('Wait Time')
+
     def run(self):
         """The main loop of the application code."""
 
-        metric1 = OperatingSystemMetrics()
-        metric2 = MemoryMetrics()
-        metric3 = ThreadingMetrics()
-        metric4 = JRubyMetrics()
+        self.metric1 = OperatingSystemMetrics()
+        self.metric2 = MemoryMetrics()
+        self.metric3 = ThreadingMetrics()
+        self.metric4 = JRubyMetrics()
 
         #
         # GUI
         #
         try:
-            screen = curses.initscr()
-            screen.addstr(0, 0, f'Node: {self.puppetserver}')
-            screen.addstr(0, 30, 'Puppetserver Metrics')
-            screen.addstr(0, 50, time.asctime().rjust(30))
-
-            # Threads panel
-            screen.addstr(3, 48, "{:^13}".format("JVM Threads"))
-            screen.addstr(4, 48, "{:<8}".format("Current:"))
-            screen.addstr(5, 48, "{:<8}".format("Daemon:"))
-            screen.addstr(6, 48, "{:<8}".format("Peak:"))
-
-            # System panel
-            screen.addstr(3, 63, "{:^10}".format("System"))
-            screen.addstr(4, 63, "{:<7}".format("Load:"))
-            screen.addstr(5, 63, "{:<7}".format("CPUs:"))
-            screen.addstr(6, 63, "{:<7}".format("Mem:"))
-
-            # JVM panel
-            screen.addstr(5, 0, 'JVM')
-            widget1 = Widget(screen, 3, 8)
-            widget1.upper_title('CPU Time')
-            widget1.lower_title('Heap')
-            widget1.upper_limit(metric1.available_processors)
-            widget1.lower_limit(metric2.heap_memory_max)
-
-            # Request panel
-            screen.addstr(12, 0, 'REQ')
-            widget2 = Widget(screen, 10, 8)
-            widget2.upper_title('Mean Rate')
-            widget2.lower_title('1min Rate')
-
-            # Queue Limit panel
-            widget3 = Widget(screen, 10, 45)
-            widget3.upper_title('Mean Q-Lim Rate')
-            widget3.lower_title('1min Q-Lim Rate')
-
-            # JRUBY panels
-            screen.addstr(19, 0, 'JRUBY')
-            widget4 = Widget(screen, 17, 8)
-            widget4.upper_title('Mean In-Use')
-            widget4.lower_title('Current In-Use')
-            widget4.limit(metric4.num_rubies)
-
-            widget5 = Widget(screen, 17, 45)
-            widget5.upper_title('Service Time')
-            widget5.lower_title('Wait Time')
+            self.initscreen()
 
             # Display initial screen
-            screen.refresh()
+            self.screen.refresh()
 
             while not self.done.is_set():
-                next_loop_time = time.time() + self.refresh_interval
+                loop_time = time.time()
+                next_loop_time = loop_time + self.refresh_interval
 
                 # Refresh all metrics
-                metric1.refresh()
-                metric2.refresh()
-                metric3.refresh()
-                metric4.refresh()
+                self.metric1.refresh()
+                self.metric2.refresh()
+                self.metric3.refresh()
+                self.metric4.refresh()
 
                 # JVM Threads
-                screen.addstr(4, 56, "{:5d}".format(metric3.thread_count))
-                screen.addstr(5, 56, "{:5d}".format(metric3.daemon_thread_count))
-                screen.addstr(6, 56, "{:5d}".format(metric3.peak_thread_count))
+                self.screen.addstr(4, 56, "{:5d}".format(self.metric3.thread_count))
+                self.screen.addstr(5, 56, "{:5d}".format(self.metric3.daemon_thread_count))
+                self.screen.addstr(6, 56, "{:5d}".format(self.metric3.peak_thread_count))
 
                 # Node
-                system_load_average = metric1.system_load_average
-                available_processors = metric1.available_processors
-                physical_memory_size = Widget.unit(metric1.physical_memory_size)
-
-                screen.addstr(4, 69, "{:5.2f}".format(system_load_average))
-                screen.addstr(5, 69, "{:5d}".format(available_processors))
-                screen.addstr(6, 69, "{:>5}".format(physical_memory_size))
+                self.screen.addstr(4, 69, "{:5.2f}".format(self.metric1.system_load_average))
+                self.screen.addstr(5, 69, "{:5d}".format(self.metric1.available_processors))
+                self.screen.addstr(6, 69, "{:>5}".format(Widget.unit(self.metric1.physical_memory_size)))
 
                 # JVM
-                process_cpu_time = metric1.process_cpu_time
-                heap_memory_used = metric2.heap_memory_used
-
-                widget1.uvalue(process_cpu_time, 2)
-                widget1.lvalue(heap_memory_used, 2)
+                self.widget1.uvalue(self.metric1.process_cpu_time, 2)
+                self.widget1.lvalue(self.metric2.heap_memory_used, 2)
 
                 # HTTP request rate
-                request_rate_mean = metric4.request_rate_mean
-                request_rate_1min = metric4.request_rate_1min
+                self.widget2.limit(self.metric4.request_rate_mean)
+                self.widget2.limit(self.metric4.request_rate_1min)
 
-                widget2.limit(request_rate_mean)
-                widget2.limit(request_rate_1min)
-
-                widget2.uvalue(request_rate_mean, 1)
-                widget2.lvalue(request_rate_1min, 1)
+                self.widget2.uvalue(self.metric4.request_rate_mean, 1)
+                self.widget2.lvalue(self.metric4.request_rate_1min, 1)
 
                 # Queue Limit Hit Rate
-                queue_limit_rate_mean = metric4.queue_limit_rate_mean
-                queue_limit_rate_1min = metric4.queue_limit_rate_1min
+                self.widget3.limit(self.metric4.queue_limit_rate_mean)
+                self.widget3.limit(self.metric4.queue_limit_rate_1min)
 
-                widget3.limit(queue_limit_rate_mean)
-                widget3.limit(queue_limit_rate_1min)
-
-                widget3.uvalue(queue_limit_rate_mean, 2)
-                widget3.lvalue(queue_limit_rate_1min, 2)
+                self.widget3.uvalue(self.metric4.queue_limit_rate_mean, 2)
+                self.widget3.lvalue(self.metric4.queue_limit_rate_1min, 2)
 
                 # JRubies in-use
-                mean_used_rubies = metric4.mean_used_rubies
-                curr_used_rubies = metric4.used_rubies
-
-                widget4.uvalue(mean_used_rubies, 2)
-                widget4.lvalue(curr_used_rubies)
+                self.widget4.uvalue(self.metric4.mean_used_rubies, 2)
+                self.widget4.lvalue(self.metric4.used_rubies)
 
                 # JRubies service and wait time
-                svctime = metric4.borrow_time_mean
-                waittime = metric4.wait_time_mean
+                self.widget5.limit(self.metric4.borrow_time_mean)
+                self.widget5.limit(self.metric4.wait_time_mean)
 
-                widget5.limit(svctime)
-                widget5.limit(waittime)
-
-                widget5.uvalue(svctime, 1)
-                widget5.lvalue(waittime, 1)
+                self.widget5.uvalue(self.metric4.borrow_time_mean, 1)
+                self.widget5.lvalue(self.metric4.wait_time_mean, 1)
 
                 # Print current timestamp
-                screen.addstr(0, 50, time.asctime().rjust(30))
+                self.screen.addstr(0, 50, time.asctime(time.localtime(loop_time)).rjust(30))
 
-                screen.refresh()
+                self.screen.refresh()
 
-                # TODO: save metrics to file here
+                # TODO: save metrics to file
 
                 # Calculate delay based on the start time of the loop
                 self.done.wait(next_loop_time - time.time())
